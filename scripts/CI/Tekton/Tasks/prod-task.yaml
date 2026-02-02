@@ -1,0 +1,71 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: promote-staging-to-prod
+spec:
+  params:
+    - name: gitUrl
+      type: string
+    - name: gitRevision
+      type: string
+      default: main
+    - name: appName
+      type: string
+
+  workspaces:
+    - name: doc-source
+
+  steps:
+    # ---------------------------
+    # 1. Clone GitOps repo
+    # ---------------------------
+    - name: git-clone
+      image: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.6.2-21
+      workingDir: $(workspaces.doc-source.path)
+      script: |
+        #!/usr/bin/env sh
+        set -e
+        git clone -b $(params.gitRevision) "$(params.gitUrl)" repo
+
+    # ---------------------------
+    # 2. Promote image STAGING ➜ PROD
+    # ---------------------------
+    - name: promote-image
+      image: registry.redhat.io/ubi9/ubi-minimal
+      workingDir: $(workspaces.doc-source.path)/repo
+      script: |
+        #!/usr/bin/env sh
+        set -e
+
+        STAGE_FILE="apps/$(params.appName)/staging/deployment.yaml"
+        PROD_FILE="apps/$(params.appName)/prod/deployment.yaml"
+
+        IMAGE=$(grep -E "^[[:space:]]*image:" "$STAGE_FILE" | awk '{print $2}')
+
+        if [ -z "$IMAGE" ]; then
+          echo "ERROR: Could not extract image from STAGING deployment"
+          exit 1
+        fi
+
+        echo "Promoting image to PROD: $IMAGE"
+
+        # ✅ Preserve indentation
+        sed -i "s|^\([[:space:]]*\)image:.*|\1image: $IMAGE|" "$PROD_FILE"
+
+    # ---------------------------
+    # 3. Commit & push
+    # ---------------------------
+    - name: git-push
+      image: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.6.2-21
+      workingDir: $(workspaces.doc-source.path)/repo
+      script: |
+        #!/usr/bin/env sh
+        set -e
+
+        git config --global user.email "tekton@tekton.dev"
+        git config --global user.name "Tekton Pipeline"
+
+        git add apps/$(params.appName)/prod/deployment.yaml
+        git commit -m "Promote $(params.appName) from STAGING to PROD" || true
+        git push origin $(params.gitRevision)
+

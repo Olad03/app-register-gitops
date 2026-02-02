@@ -23,7 +23,7 @@ spec:
     - name: DEPLOYMENT_PATH
       type: string
       description: Path to deployment.yaml inside the GitOps repo
-      default: apps/php-simple-register/deployment.yaml
+      default: apps/php-simple-register/dev/deployment.yaml
 
   steps:
     - name: git-clone

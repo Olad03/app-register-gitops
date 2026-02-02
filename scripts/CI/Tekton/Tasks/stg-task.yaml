@@ -1,0 +1,60 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: promote-dev-to-staging
+spec:
+  params:
+    - name: gitUrl
+      type: string
+    - name: gitRevision
+      type: string
+      default: main
+    - name: appName
+      type: string
+
+  workspaces:
+    - name: doc-source
+
+  steps:
+    - name: git-clone
+      image: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.6.2-21
+      workingDir: $(workspaces.doc-source.path)
+      script: |
+        #!/usr/bin/env sh
+        set -e
+        git clone -b $(params.gitRevision) "$(params.gitUrl)" repo
+
+    - name: promote-image
+      image: registry.redhat.io/ubi9/ubi-minimal
+      workingDir: $(workspaces.doc-source.path)/repo
+      script: |
+        #!/usr/bin/env sh
+        set -e
+
+        DEV_FILE="apps/$(params.appName)/dev/deployment.yaml"
+        STAGE_FILE="apps/$(params.appName)/staging/deployment.yaml"
+
+        IMAGE=$(grep -E "^[[:space:]]*image:" "$DEV_FILE" | awk '{print $2}')
+
+        if [ -z "$IMAGE" ]; then
+          echo "ERROR: Could not extract image from DEV deployment"
+          exit 1
+        fi
+
+        # ✅ Preserve indentation
+        sed -i "s|^\([[:space:]]*\)image:.*|\1image: $IMAGE|" "$STAGE_FILE"
+
+    - name: git-push
+      image: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.6.2-21
+      workingDir: $(workspaces.doc-source.path)/repo
+      script: |
+        #!/usr/bin/env sh
+        set -e
+
+        git config --global user.email "tekton@tekton.dev"
+        git config --global user.name "Tekton Pipeline"
+
+        git add apps/$(params.appName)/staging/deployment.yaml
+        git commit -m "Promote $(params.appName) from DEV to STAGING" || true
+        git push origin $(params.gitRevision)
+

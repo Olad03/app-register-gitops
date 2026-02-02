@@ -1,0 +1,57 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: promote-dev-to-staging-direct
+spec:
+  params:
+    - name: gitUrl
+      type: string
+    - name: appName
+      type: string
+    - name: branch
+      type: string
+      default: main
+  steps:
+    - name: promote
+      image: registry.redhat.io/ubi9/git
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        echo "📥 Clone GitOps repo"
+        git clone $(params.gitUrl) repo
+        cd repo
+        git checkout $(params.branch)
+
+        DEV_FILE="apps/$(params.appName)/dev/deployment.yaml"
+        STAGE_FILE="apps/$(params.appName)/staging/deployment.yaml"
+
+        echo "🔍 Extract image from DEV"
+        IMAGE=$(grep -E "^\s*image:" "$DEV_FILE" | awk '{print $2}')
+
+        if [ -z "$IMAGE" ]; then
+          echo "❌ Image not found in DEV deployment"
+          exit 1
+        fi
+
+        echo "✅ DEV image: $IMAGE"
+
+        echo "✏️ Update STAGING image"
+        sed -i "s|^\(\s*image:\).*|\1 $IMAGE|" "$STAGE_FILE"
+
+        echo "📌 Git diff"
+        git diff
+
+        git config user.email "tekton@tekton.dev"
+        git config user.name "Tekton Pipeline"
+        git add "$STAGE_FILE"
+        git commit -m "Promote $(params.appName) to STAGING ($IMAGE)" || {
+          echo "ℹ️ No changes to commit"
+          exit 0
+        }
+
+        echo "🚀 Push to main"
+        git push origin $(params.branch)
+
+        echo "✅ STAGING promotion committed"
+

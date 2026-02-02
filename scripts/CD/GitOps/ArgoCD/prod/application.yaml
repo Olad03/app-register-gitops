@@ -5,7 +5,7 @@ metadata:
   namespace: openshift-gitops
 spec:
   destination:
-    namespace: app-register-prod
+    namespace: app-register-dev
     server: https://kubernetes.default.svc
   project: default
   source:

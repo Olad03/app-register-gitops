@@ -1,0 +1,25 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: check-dev-health
+spec:
+  params:
+    - name: devHealthUrl
+      type: string
+  steps:
+    - name: http-health-check
+      image: registry.redhat.io/ubi9/ubi-minimal
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        echo "🔍 Checking DEV health: $(params.devHealthUrl)"
+        STATUS=$(curl -sk -o /dev/null -w "%{http_code}" "$(params.devHealthUrl)")
+
+        if [ "$STATUS" != "200" ]; then
+          echo "❌ DEV unhealthy (HTTP $STATUS)"
+          exit 1
+        fi
+
+        echo "✅ DEV is healthy"
+

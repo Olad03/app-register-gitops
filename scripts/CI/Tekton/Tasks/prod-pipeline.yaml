@@ -1,0 +1,32 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: staging-verified-promote-to-prod
+spec:
+  params:
+    - name: gitUrl
+      type: string
+    - name: appName
+      type: string
+    - name: gitRevision
+      type: string
+      default: main
+
+  workspaces:
+    - name: doc-source
+
+  tasks:
+    - name: promote-staging-to-prod
+      taskRef:
+        name: promote-staging-to-prod
+      params:
+        - name: gitUrl
+          value: $(params.gitUrl)
+        - name: appName
+          value: $(params.appName)
+        - name: gitRevision
+          value: $(params.gitRevision)
+      workspaces:
+        - name: doc-source
+          workspace: doc-source
+
