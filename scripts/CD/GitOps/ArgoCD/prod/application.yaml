@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-register-prod
+  namespace: openshift-gitops
+spec:
+  destination:
+    namespace: app-register-prod
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: apps/php-simple-register/prod
+    repoURL: https://github.com/Olad03/app-register-gitops
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

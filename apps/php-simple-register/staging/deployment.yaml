@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-simple-register-app
+  namespace: app-register-staging
+  labels:
+    app: php-simple-register-app
+    app.kubernetes.io/name: php-simple-register-app
+    app.kubernetes.io/instance: php-simple-register-app
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: php-simple-register-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: php-simple-register-app
+    spec:
+      containers:
+        - name: php-simple-register-app
+          image: quay.io/saburi_adekanbi/app-register:5.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 8443
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

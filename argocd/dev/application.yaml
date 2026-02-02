@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: php-app-register
+  name: app-register-dev
   namespace: openshift-gitops
 spec:
+  destination:
+    namespace: app-register-dev
+    server: https://kubernetes.default.svc
   project: default
   source:
-    repoURL: https://github.com/olad03/test-app-gitops.git
+    path: apps/php-simple-register/dev
+    repoURL: https://github.com/Olad03/app-register-gitops
     targetRevision: main
-    path: apps/php-simple-register
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: test-app
   syncPolicy:
     automated:
       prune: true

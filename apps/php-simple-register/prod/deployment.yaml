@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: php-simple-register-app
-  namespace: test-app
+  namespace: app-register-prod
   labels:
     app: php-simple-register-app
     app.kubernetes.io/name: php-simple-register-app
@@ -25,8 +25,8 @@ spec:
     spec:
       containers:
         - name: php-simple-register-app
-          image: quay.io/saburi_adekanbi/test-app/test-app-php:1.0
-          imagePullPolicy: IfNotPresent
+          image: quay.io/saburi_adekanbi/app-register:5.0
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               protocol: TCP

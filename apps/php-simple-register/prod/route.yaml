@@ -1,0 +1,20 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: php-simple-register-app
+  namespace: app-register-prod
+  labels:
+    app: php-simple-register-app
+    app.kubernetes.io/name: php-simple-register-app
+    app.kubernetes.io/instance: php-simple-register-app
+    app.kubernetes.io/component: backend
+spec:
+  to:
+    kind: Service
+    name: php-simple-register-app
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

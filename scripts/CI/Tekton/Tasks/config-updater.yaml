@@ -4,69 +4,78 @@ metadata:
   name: config-updater
 spec:
   params:
-    - description: GitHub source code repository URL
-      name: gitUrl
+    - name: gitUrl
       type: string
-    - description: GitHub branch
-      name: gitRevision
+      description: GitHub source code repository URL
+
+    - name: gitRevision
       type: string
-    - description: Reference of the image produced by buildah
-      name: IMAGE
+      description: GitHub branch
+
+    - name: IMAGE
       type: string
-    - description: Reference of the image tag produced by buildah
-      name: TAG
+      description: Reference of the image produced by buildah
+
+    - name: TAG
       type: string
+      description: Reference of the image tag produced by buildah
+
+    - name: DEPLOYMENT_PATH
+      type: string
+      description: Path to deployment.yaml inside the GitOps repo
+      default: apps/php-simple-register/deployment.yaml
+
   steps:
-    - image: >-
-        registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.6.2-21
-      name: git-clone
-      resources: {}
+    - name: git-clone
+      image: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.6.2-21
+      workingDir: $(workspaces.doc-source.path)
       script: |
         #!/usr/bin/env sh
+        set -e
 
         echo "------Cloning gitops repo------"
-        git clone -b $(params.gitRevision) "$(params.gitUrl)" ./ || exit 1
+        #       rm -rf repo
+        git clone -b $(params.gitRevision) "$(params.gitUrl)" repo
         echo "-------------------------------"
-      workingDir: $(workspaces.doc-source.path)
-    - image: 'python:3.8.5-slim'
-      name: update-image-tag
-      resources: {}
-      script: >
+
+    - name: update-image-tag
+      image: python:3.8.5-slim
+      workingDir: $(workspaces.doc-source.path)/repo
+      script: |
         #!/usr/bin/env sh
+        set -e
 
         echo "------Updating Image Tag------"
 
-        pip install pyyaml || exit 1
+        pip install --no-cache-dir pyyaml
 
-        python -c 'import yaml;f=open("values.yaml");y=yaml.safe_load(f);y["image"]["repository"]="'$(params.IMAGE)'";f.close();f=open("values.yaml","w");yaml.dump(y,f);f.close()' || exit 1
+        if [ ! -f "$(params.DEPLOYMENT_PATH)" ]; then
+          echo "ERROR: Deployment file not found: $(params.DEPLOYMENT_PATH)"
+          exit 1
+        fi
 
-        python -c 'import yaml;f=open("values.yaml");y=yaml.safe_load(f);y["image"]["tag"]="'$(params.TAG)'";f.close();f=open("values.yaml","w");yaml.dump(y,f);f.close()' || exit 1
+        python -c "import yaml; f='$(params.DEPLOYMENT_PATH)'; d=yaml.safe_load(open(f)); d['spec']['template']['spec']['containers'][0]['image']='$(params.IMAGE):$(params.TAG)'; yaml.safe_dump(d, open(f,'w'), sort_keys=False)"
 
         echo "-------------------------------"
-      workingDir: $(workspaces.doc-source.path)
-    - image: >-
-        registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.6.2-21
-      name: git-push
-      resources: {}
-      script: >
-        #!/usr/bin/env sh
 
+    - name: git-push
+      image: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.6.2-21
+      workingDir: $(workspaces.doc-source.path)/repo
+      script: |
+        #!/usr/bin/env sh
+        set -e
 
         echo "------Pushing the updates------"
 
         git config --global user.email "tekton@tekton.dev"
-
         git config --global user.name "Tekton Pipeline"
 
-        git branch 
-
-        git add . || exit 1
-
-        git commit -m "Updated with image $(params.IMAGE):$(params.TAG)" || exit 1
-
-        git push origin $(params.gitRevision) || exit 1
+        git status
+        git add "$(params.DEPLOYMENT_PATH)"
+        git commit -m "Updated image to $(params.IMAGE):$(params.TAG)" || true
+        git push origin $(params.gitRevision)
 
         echo "-------------------------------"
-      workingDir: $(workspaces.doc-source.path)
+
   workspaces:
     - name: doc-source

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: php-simple-register-app
-  namespace: test-app
+  namespace: app-register-dev
   labels:
     app: php-simple-register-app
     app.kubernetes.io/name: php-simple-register-app
