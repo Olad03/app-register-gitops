@@ -24,18 +24,18 @@ spec:
         app: php-simple-register-app
     spec:
       containers:
-        - name: php-simple-register-app
-          image: quay.io/saburi_adekanbi/app-register:5.0
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8080
-              protocol: TCP
-            - containerPort: 8443
-              protocol: TCP
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 256Mi
+      - name: php-simple-register-app
+        image: quay.io/saburi_adekanbi/app-register:img-5.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8443
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
