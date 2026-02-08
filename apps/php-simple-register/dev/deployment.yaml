@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: php-simple-register-app
-        image: quay.io/saburi_adekanbi/app-register:img-6.3
+        image: quay.io/saburi_adekanbi/app-register:img-6.4
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
